@@ -4,7 +4,6 @@ WIZARD_VERSION="1.0.0"
 
 # Resolve installation directory
 WIZARD_HOME="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WIZARD_COMMANDS="$WIZARD_HOME"
 WIZARD_LIB="$WIZARD_HOME/lib"
 
 # Load shared library
@@ -14,6 +13,10 @@ log() {
   echo "[wizard] $1"
 }
 
+# -----------------------------
+# HELP SYSTEM
+# -----------------------------
+
 show_help() {
   cat <<EOF
 Wizard — your developer command spellbook
@@ -22,13 +25,14 @@ Usage:
   wizard <command> [args]
 
 Commands:
-  summon <target> <path>     Summon an IDE at the given path
+  summon <target> [path]     Summon an IDE or tool at the given path
   configure                  Run interactive configuration wizard
-  config list                Show current IDE configuration
+  config list                Show current IDE/tool configuration
   upgrade                    Upgrade Wizard to the latest version
   reinstall                  Reinstall Wizard (keeps config)
+  doctor                     Run diagnostics and check configuration
+  self-update                Update Wizard to the latest version
   version                    Show Wizard version
-  help [command]             Show help for a command
 
 Examples:
   wizard summon idea .
@@ -39,6 +43,8 @@ Examples:
   wizard config list
   wizard upgrade
   wizard reinstall
+  wizard doctor
+  wizard self-update
 
 Run 'wizard help summon' for more details.
 EOF
@@ -49,7 +55,7 @@ show_command_help() {
     summon)
       cat <<EOF
 Usage:
-  wizard summon <target> <path>
+  wizard summon <target> [path]
 
 Targets:
   idea             IntelliJ IDEA
@@ -74,7 +80,7 @@ Run an interactive configuration wizard to set paths for:
   - IntelliJ IDEA (idea)
   - JetBrains Rider (rider)
   - Visual Studio / VS Code (vs)
-  - GitExtensions
+  - GitExtensions (gitext)
 
 Existing values are shown in brackets.
 Press ENTER to keep or skip a value.
@@ -86,6 +92,27 @@ EOF
   esac
 }
 
+# -----------------------------
+# CONFIGURATION WIZARD
+# -----------------------------
+
+configure_field() {
+  local key="$1"
+  local label="$2"
+
+  local current new
+  current="$(wizard_config_get "$key")"
+
+  echo "Path to $label ($key)"
+  [[ -n "$current" ]] && echo "Current: $current"
+
+  read -rp "> " new
+  if [[ -n "$new" || -z "$current" ]]; then
+    wizard_config_set "$key" "$new"
+  fi
+  echo
+}
+
 configure_interactive() {
   mkdir -p "$(dirname "$WIZARD_CONFIG")"
 
@@ -93,70 +120,43 @@ configure_interactive() {
   echo "Press ENTER to keep the existing value or leave empty."
   echo
 
-  local current new
-
-  # IntelliJ IDEA
-  current="$(wizard_config_get idea)"
-  echo "Path to IntelliJ IDEA (idea)"
-  [[ -n "$current" ]] && echo "Current: $current"
-  read -rp "> " new
-  if [[ -n "$new" || -z "$current" ]]; then
-    wizard_config_set "idea" "$new"
-  fi
-  echo
-
-  # Rider
-  current="$(wizard_config_get rider)"
-  echo "Path to JetBrains Rider (rider)"
-  [[ -n "$current" ]] && echo "Current: $current"
-  read -rp "> " new
-  if [[ -n "$new" || -z "$current" ]]; then
-    wizard_config_set "rider" "$new"
-  fi
-  echo
-
-  # VS / VS Code
-  current="$(wizard_config_get vs)"
-  echo "Path to Visual Studio / VS Code (vs) (e.g. 'code' or full path)"
-  [[ -n "$current" ]] && echo "Current: $current"
-  read -rp "> " new
-  if [[ -n "$new" || -z "$current" ]]; then
-    wizard_config_set "vs" "$new"
-  fi
-  echo
-
-  # GitExtensions
-  current="$(wizard_config_get gitext)"
-  echo "Path to GitExtensions (gitext)"
-  [[ -n "$current" ]] && echo "Current: $current"
-  read -rp "> " new
-  if [[ -n "$new" || -z "$current" ]]; then
-    wizard_config_set "gitext" "$new"
-  fi
-  echo
+  configure_field "idea"   "IntelliJ IDEA"
+  configure_field "rider"  "JetBrains Rider"
+  configure_field "vs"     "Visual Studio / VS Code"
+  configure_field "gitext" "GitExtensions"
 
   wizard_log "Configuration saved to $WIZARD_CONFIG"
 }
+
+# -----------------------------
+# SUMMON DISPATCHER
+# -----------------------------
 
 dispatch_summon() {
   local target="$1"
   shift || true
 
   if [[ -z "$target" ]]; then
-    wizard_log "ERROR: Missing summon target (idea|rider|vs)."
-    exit 1
+    wizard_fail "Missing summon target."
   fi
 
-  local cmd="$WIZARD_COMMANDS/summon-$target"
+  local cmd="$WIZARD_HOME/summon-$target"
 
   if [[ ! -x "$cmd" ]]; then
     wizard_log "ERROR: Unknown summon target: $target"
-    wizard_log "Known targets: idea, rider, vs"
+    wizard_log "Known targets:"
+    for f in "$WIZARD_HOME"/summon-*; do
+      echo "  - $(basename "$f" | sed 's/summon-//')"
+    done
     exit 1
   fi
 
   "$cmd" "$@"
 }
+
+# -----------------------------
+# MAIN DISPATCHER
+# -----------------------------
 
 main() {
   local cmd="$1"
@@ -164,11 +164,7 @@ main() {
 
   case "$cmd" in
     ""|help)
-      if [[ -n "$1" ]]; then
-        show_command_help "$1"
-      else
-        show_help
-      fi
+      [[ -n "$1" ]] && show_command_help "$1" || show_help
       ;;
     version|-v|--version)
       echo "wizard $WIZARD_VERSION"
@@ -181,12 +177,8 @@ main() {
       ;;
     config)
       case "$1" in
-        list)
-          wizard_config_list
-          ;;
-        *)
-          wizard_fail "Usage: wizard config list"
-          ;;
+        list) wizard_config_list ;;
+        *) wizard_fail "Usage: wizard config list" ;;
       esac
       ;;
     upgrade)
@@ -194,6 +186,12 @@ main() {
       ;;
     reinstall)
       bash "$WIZARD_HOME/reinstall.sh"
+      ;;
+    doctor)
+      bash "$WIZARD_HOME/doctor"
+      ;;
+    self-update)
+      bash "$WIZARD_HOME/self-update"
       ;;
     *)
       log "ERROR: Unknown command: $cmd"

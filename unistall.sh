@@ -5,16 +5,17 @@ log() {
   echo "[wizard-uninstall] $1"
 }
 
-INSTALL_BIN_DIR="$HOME/.local/bin"
+INSTALL_DIR="$HOME/.local/bin/wizard"
+ENTRYPOINT="$HOME/.local/bin/wizard"
 COMPLETION_DIR="$HOME/.local/share/bash-completion/completions"
 MAN_DIR="$HOME/.local/share/man/man1"
 
 main() {
-  log "Removing wizard binary and commands..."
-  rm -f "$INSTALL_BIN_DIR/wizard"
-  rm -f "$INSTALL_BIN_DIR/summon-idea"
-  rm -f "$INSTALL_BIN_DIR/summon-rider"
-  rm -f "$INSTALL_BIN_DIR/summon-vs"
+  log "Removing Wizard installation directory..."
+  rm -rf "$INSTALL_DIR"
+
+  log "Removing Wizard entrypoint..."
+  rm -f "$ENTRYPOINT"
 
   log "Removing bash completion..."
   rm -f "$COMPLETION_DIR/wizard"

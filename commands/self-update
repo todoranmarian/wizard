@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+
+WIZARD_HOME="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$WIZARD_HOME/lib/wizard-common"
+
+INSTALL_URL="https://raw.githubusercontent.com/todoranmarian/wizard/master/install.sh"
+
+wizard_log "Checking update method..."
+
+# 1. Git available?
+if command -v git >/dev/null 2>&1; then
+  # 2. Is Wizard installed inside a Git repo?
+  if git -C "$WIZARD_HOME" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    wizard_log "Git detected. Updating via git pull..."
+    git -C "$WIZARD_HOME" pull || wizard_fail "Git update failed."
+    wizard_log "Running wizard upgrade..."
+    bash "$WIZARD_HOME/upgrade.sh"
+    wizard_log "Wizard successfully updated via Git."
+    exit 0
+  fi
+fi
+
+# 3. Fallback: curl-based update
+wizard_log "Updating via curl..."
+curl -fsSL "$INSTALL_URL" -o /tmp/wizard-install.sh \
+  || wizard_fail "Failed to download installer."
+
+wizard_log "Running installer..."
+bash /tmp/wizard-install.sh \
+  || wizard_fail "Installer failed."
+
+wizard_log "Wizard successfully updated."

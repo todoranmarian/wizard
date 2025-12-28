@@ -8,15 +8,25 @@ _wizard_completions() {
   prev="${COMP_WORDS[COMP_CWORD-1]}"
   cword=$COMP_CWORD
 
-  # Where Wizard is installed
-  local wizard_home="$HOME/.local/bin"
+  # Where wizard is installed (directory containing the 'wizard' binary)
+  local wizard_bin
+  wizard_bin="$(command -v wizard 2>/dev/null || true)"
+  [[ -z "$wizard_bin" ]] && return 0
+
+  local wizard_home
+  wizard_home="$(dirname "$wizard_bin")"
 
   # Dynamic summon targets (summon-idea → idea)
   local summon_targets
-  summon_targets=$(ls "$wizard_home" | grep '^summon-' | sed 's/summon-//' | tr '\n' ' ')
+  summon_targets=$(
+    ls "$wizard_home"/summon-* 2>/dev/null \
+      | xargs -n1 basename \
+      | sed 's/^summon-//' \
+      | tr '\n' ' '
+  )
 
   # Top-level commands
-  local top_commands="summon configure config help version"
+  local top_commands="summon configure config help version doctor self-update"
 
   # wizard <TAB>
   if [[ $cword -eq 1 ]]; then

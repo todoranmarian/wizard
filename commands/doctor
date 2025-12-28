@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+
+WIZARD_HOME="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$WIZARD_HOME/lib/wizard-common"
+
+echo "Wizard Doctor — running diagnostics..."
+echo
+
+# Check installation directory
+if [[ -d "$WIZARD_HOME" ]]; then
+  echo "✓ Wizard installed at $WIZARD_HOME"
+else
+  echo "✗ Wizard installation directory missing"
+fi
+
+# Check shared library
+if [[ -f "$WIZARD_HOME/lib/wizard-common" ]]; then
+  echo "✓ Shared library found"
+else
+  echo "✗ Shared library missing"
+fi
+
+# Check config file
+if [[ -f "$WIZARD_CONFIG" ]]; then
+  echo "✓ Config file found at $WIZARD_CONFIG"
+else
+  echo "⚠ No config file found"
+fi
+
+echo
+echo "Checking summon targets:"
+for script in "$WIZARD_HOME"/summon-*; do
+  name="$(basename "$script" | sed 's/summon-//')"
+  echo -n "  - $name: "
+
+  exe="$(wizard_config_get "$name")"
+
+  if [[ -z "$exe" ]]; then
+    echo "⚠ not configured"
+    continue
+  fi
+
+  if [[ -f "$exe" || "$(command -v "$exe")" ]]; then
+    echo "✓ OK ($exe)"
+  else
+    echo "✗ executable not found ($exe)"
+  fi
+done
+
+echo
+# Check autocomplete
+if grep -q "wizard" "$HOME/.bashrc" 2>/dev/null; then
+  echo "✓ Autocomplete appears installed"
+else
+  echo "⚠ Autocomplete not detected in ~/.bashrc"
+fi
+
+echo
+echo "Doctor finished."
