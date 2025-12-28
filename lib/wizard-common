@@ -1,0 +1,199 @@
+#!/usr/bin/env bash
+
+# --- Logging -------------------------------------------------------------
+
+wizard_log() {
+  echo "[wizard] $1"
+}
+
+wizard_log_cmd() {
+  local cmd="$1"
+  shift
+  echo "[wizard:$cmd] $*"
+}
+
+# --- Error handling ------------------------------------------------------
+
+wizard_fail() {
+  wizard_log "ERROR: $1"
+  exit 1
+}
+
+# --- Path resolution -----------------------------------------------------
+
+wizard_realpath() {
+  local target="$1"
+
+  if command -v realpath >/dev/null 2>&1; then
+    realpath "$target"
+    return
+  fi
+
+  if command -v python3 >/dev/null 2>&1; then
+    python3 - <<EOF
+import os, sys
+print(os.path.abspath(sys.argv[1]))
+EOF
+    "$target"
+    return
+  fi
+
+  case "$target" in
+    /*) echo "$target" ;;
+    *) echo "$PWD/$target" ;;
+  esac
+}
+
+# --- IDE detection helpers ----------------------------------------------
+wizard_find_intellij() {
+  # --- Windows (Git Bash / MSYS2 / MINGW64) ------------------------------
+  # Convert Windows Program Files path to Unix-style
+  local win_idea="/c/Program Files/JetBrains"
+  if [[ -d "$win_idea" ]]; then
+    # Find any IntelliJ installation inside Program Files
+    local idea_dir
+    idea_dir=$(ls "$win_idea" | grep -i "IntelliJ" | head -n 1)
+
+    if [[ -n "$idea_dir" ]]; then
+      local exe="$win_idea/$idea_dir/bin/idea64.exe"
+      if [[ -f "$exe" ]]; then
+        echo "$exe"
+        return
+      fi
+    fi
+  fi
+
+  # --- macOS JetBrains Toolbox ------------------------------------------
+  if [[ -d "$HOME/Applications/JetBrains Toolbox/IntelliJ IDEA.app" ]]; then
+    echo "$HOME/Applications/JetBrains Toolbox/IntelliJ IDEA.app/Contents/MacOS/idea"
+    return
+  fi
+
+  # --- macOS standard ----------------------------------------------------
+  if [[ -d "/Applications/IntelliJ IDEA.app" ]]; then
+    echo "/Applications/IntelliJ IDEA.app/Contents/MacOS/idea"
+    return
+  fi
+
+  # --- Linux JetBrains Toolbox (Ultimate) --------------------------------
+  local tb="$HOME/.local/share/JetBrains/Toolbox/apps/IDEA-U/ch-0"
+  if [[ -d "$tb" ]]; then
+    local latest
+    latest=$(ls -1 "$tb" | sort -V | tail -n 1)
+    [[ -x "$tb/$latest/bin/idea.sh" ]] && echo "$tb/$latest/bin/idea.sh" && return
+  fi
+
+  # --- Linux JetBrains Toolbox (Community) -------------------------------
+  tb="$HOME/.local/share/JetBrains/Toolbox/apps/IDEA-C/ch-0"
+  if [[ -d "$tb" ]]; then
+    local latest
+    latest=$(ls -1 "$tb" | sort -V | tail -n 1)
+    [[ -x "$tb/$latest/bin/idea.sh" ]] && echo "$tb/$latest/bin/idea.sh" && return
+  fi
+
+  # --- PATH --------------------------------------------------------------
+  command -v idea >/dev/null 2>&1 && command -v idea && return
+  command -v idea.sh >/dev/null 2>&1 && command -v idea.sh && return
+
+  return 1
+}
+
+wizard_find_rider() {
+  # macOS Toolbox
+  if [[ -d "$HOME/Applications/JetBrains Toolbox/Rider.app" ]]; then
+    echo "$HOME/Applications/JetBrains Toolbox/Rider.app/Contents/MacOS/rider"
+    return
+  fi
+
+  # macOS standard
+  if [[ -d "/Applications/Rider.app" ]]; then
+    echo "/Applications/Rider.app/Contents/MacOS/rider"
+    return
+  fi
+
+  # Linux Toolbox
+  local tb="$HOME/.local/share/JetBrains/Toolbox/apps/Rider/ch-0"
+  if [[ -d "$tb" ]]; then
+    local latest
+    latest=$(ls -1 "$tb" | sort -V | tail -n 1)
+    [[ -x "$tb/$latest/bin/rider.sh" ]] && echo "$tb/$latest/bin/rider.sh" && return
+  fi
+
+  # PATH
+  command -v rider >/dev/null 2>&1 && command -v rider && return
+  command -v rider.sh >/dev/null 2>&1 && command -v rider.sh && return
+
+  return 1
+}
+
+wizard_find_vs() {
+  # VS Code
+  command -v code >/dev/null 2>&1 && echo "code" && return
+  command -v code-insiders >/dev/null 2>&1 && echo "code-insiders" && return
+
+  # Windows Visual Studio via WSL
+  if command -v cmd.exe >/dev/null 2>&1; then
+    echo "cmd.exe /C devenv"
+    return
+  fi
+
+  return 1
+}
+
+# --- Path resolution -----------------------------------------------------
+
+wizard_realpath() {
+  local target="$1"
+
+  if command -v realpath >/dev/null 2>&1; then
+    realpath "$target"
+    return
+  fi
+
+  if command -v python3 >/dev/null 2>&1; then
+    python3 - <<EOF
+import os, sys
+print(os.path.abspath(sys.argv[1]))
+EOF
+    "$target"
+    return
+  fi
+
+  case "$target" in
+    /*) echo "$target" ;;
+    *) echo "$PWD/$target" ;;
+  esac
+}
+
+# --- Config handling -----------------------------------------------------
+
+WIZARD_CONFIG="$HOME/.wizard/config"
+
+wizard_config_get() {
+  local key="$1"
+  # returns empty string if not found or empty
+  grep "^$key=" "$WIZARD_CONFIG" 2>/dev/null | cut -d '=' -f2-
+}
+
+wizard_config_set() {
+  local key="$1"
+  local value="$2"
+
+  mkdir -p "$(dirname "$WIZARD_CONFIG")"
+
+  if grep -q "^$key=" "$WIZARD_CONFIG" 2>/dev/null; then
+    # replace existing line
+    sed -i "s|^$key=.*|$key=$value|" "$WIZARD_CONFIG"
+  else
+    # append new line
+    echo "$key=$value" >> "$WIZARD_CONFIG"
+  fi
+}
+
+wizard_config_list() {
+  if [[ -f "$WIZARD_CONFIG" ]]; then
+    cat "$WIZARD_CONFIG"
+  else
+    wizard_log "No config file found at $WIZARD_CONFIG"
+  fi
+}

@@ -1,0 +1,55 @@
+.TH WIZARD 1 "2025-01-01" "wizard 1.0.0" "User Commands"
+
+.SH NAME
+wizard \- developer command spellbook
+
+.SH SYNOPSIS
+.B wizard
+[\fICOMMAND\fR] [ARGS]
+
+.SH DESCRIPTION
+Wizard is a modular developer command-line tool that provides spell-like
+commands for common developer tasks, such as opening projects in various IDEs.
+
+.SH COMMANDS
+.TP
+.B summon <target> <path>
+Summon an IDE and open the specified path.
+
+Targets:
+  idea   IntelliJ IDEA
+  rider  JetBrains Rider
+  vs     Visual Studio / VS Code (depending on system configuration)
+
+.TP
+.B help [command]
+Show general help or command-specific help.
+
+.TP
+.B version
+Show the wizard version.
+
+.SH EXAMPLES
+.PP
+Open the current directory in IntelliJ IDEA:
+.RS
+wizard summon idea .
+.RE
+
+.PP
+Open a project in Rider:
+.RS
+wizard summon rider ~/projects/app
+.RE
+
+.PP
+Open a solution or folder in VS / VS Code:
+.RS
+wizard summon vs MySolution.sln
+.RE
+
+.SH AUTHOR
+Written by You, the Wizard.
+
+.SH SEE ALSO
+bash(1)

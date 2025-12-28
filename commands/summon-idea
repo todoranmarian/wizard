@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+# Load shared library
+WIZARD_HOME="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$WIZARD_HOME/lib/wizard-common"
+
+CMD="summon:idea"
+
+target="$1"
+[[ -z "$target" ]] && wizard_fail "Usage: wizard summon idea <path>"
+
+idea_bin="$(wizard_config_get idea)"
+
+[[ -z "$idea_bin" ]] && wizard_fail "IntelliJ IDEA is not configured. Run: wizard configure"
+
+fullpath="$(wizard_realpath "$target")"
+[[ ! -d "$fullpath" ]] && wizard_fail "'$target' is not a directory."
+
+wizard_log_cmd "$CMD" "Using IntelliJ binary: $idea_bin"
+wizard_log_cmd "$CMD" "Opening: $fullpath"
+
+"$idea_bin" "$fullpath" >/dev/null 2>&1 &
+
+wizard_log_cmd "$CMD" "Summon complete."

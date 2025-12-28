@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+# Load shared library
+WIZARD_HOME="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$WIZARD_HOME/lib/wizard-common"
+
+CMD="summon:vs"
+
+target="$1"
+[[ -z "$target" ]] && wizard_fail "Usage: wizard summon vs <path-or-sln>"
+
+vs_cmd="$(wizard_config_get vs)"
+
+[[ -z "$vs_cmd" ]] && wizard_fail "VS / VS Code is not configured. Run: wizard configure"
+
+fullpath="$(wizard_realpath "$target")"
+[[ ! -e "$fullpath" ]] && wizard_fail "'$target' does not exist."
+
+wizard_log_cmd "$CMD" "Using VS command: $vs_cmd"
+wizard_log_cmd "$CMD" "Opening: $fullpath"
+
+# shellcheck disable=SC2086
+$vs_cmd "$fullpath" >/dev/null 2>&1 &
+
+wizard_log_cmd "$CMD" "Summon complete."

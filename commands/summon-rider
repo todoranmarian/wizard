@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+# Load shared library
+WIZARD_HOME="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$WIZARD_HOME/lib/wizard-common"
+
+CMD="summon:rider"
+
+target="$1"
+[[ -z "$target" ]] && wizard_fail "Usage: wizard summon rider <path>"
+
+rider_bin="$(wizard_config_get rider)"
+
+[[ -z "$rider_bin" ]] && wizard_fail "Rider is not configured. Run: wizard configure"
+
+fullpath="$(wizard_realpath "$target")"
+[[ ! -d "$fullpath" ]] && wizard_fail "'$target' is not a directory."
+
+wizard_log_cmd "$CMD" "Using Rider binary: $rider_bin"
+wizard_log_cmd "$CMD" "Opening: $fullpath"
+
+"$rider_bin" "$fullpath" >/dev/null 2>&1 &
+
+wizard_log_cmd "$CMD" "Summon complete."

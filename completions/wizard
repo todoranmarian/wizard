@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+
+_wizard_completions() {
+  local cur prev words cword
+  COMPREPLY=()
+
+  cur="${COMP_WORDS[COMP_CWORD]}"
+  prev="${COMP_WORDS[COMP_CWORD-1]}"
+  cword=$COMP_CWORD
+
+  # Where Wizard is installed
+  local wizard_home="$HOME/.local/bin"
+
+  # Dynamic summon targets (summon-idea → idea)
+  local summon_targets
+  summon_targets=$(ls "$wizard_home" | grep '^summon-' | sed 's/summon-//' | tr '\n' ' ')
+
+  # Top-level commands
+  local top_commands="summon configure config help version"
+
+  # wizard <TAB>
+  if [[ $cword -eq 1 ]]; then
+    COMPREPLY=( $(compgen -W "$top_commands" -- "$cur") )
+    return 0
+  fi
+
+  # wizard summon <TAB>
+  if [[ "${COMP_WORDS[1]}" == "summon" && $cword -eq 2 ]]; then
+    COMPREPLY=( $(compgen -W "$summon_targets" -- "$cur") )
+    return 0
+  fi
+
+  # wizard summon idea <TAB> → directory completion
+  if [[ "${COMP_WORDS[1]}" == "summon" && $cword -eq 3 ]]; then
+    COMPREPLY=( $(compgen -d -- "$cur") )
+    return 0
+  fi
+
+  # wizard config <TAB>
+  if [[ "${COMP_WORDS[1]}" == "config" && $cword -eq 2 ]]; then
+    COMPREPLY=( $(compgen -W "list" -- "$cur") )
+    return 0
+  fi
+
+  return 0
+}
+
+complete -F _wizard_completions wizard
