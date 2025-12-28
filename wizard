@@ -52,14 +52,16 @@ Usage:
   wizard summon <target> <path>
 
 Targets:
-  idea      IntelliJ IDEA
-  rider     JetBrains Rider
-  vs        Visual Studio / VS Code
+  idea             IntelliJ IDEA
+  rider            JetBrains Rider
+  vs               Visual Studio / VS Code
+  git-extensions   GitExtensions
 
 Examples:
   wizard summon idea .
   wizard summon rider ~/projects/app
   wizard summon vs MySolution.sln
+  wizard summon git-extensions
 EOF
       ;;
     configure)
@@ -72,6 +74,7 @@ Run an interactive configuration wizard to set paths for:
   - IntelliJ IDEA (idea)
   - JetBrains Rider (rider)
   - Visual Studio / VS Code (vs)
+  - GitExtensions
 
 Existing values are shown in brackets.
 Press ENTER to keep or skip a value.
@@ -119,6 +122,16 @@ configure_interactive() {
   read -rp "> " new
   if [[ -n "$new" || -z "$current" ]]; then
     wizard_config_set "vs" "$new"
+  fi
+  echo
+
+  # GitExtensions
+  current="$(wizard_config_get gitext)"
+  echo "Path to GitExtensions (gitext)"
+  [[ -n "$current" ]] && echo "Current: $current"
+  read -rp "> " new
+  if [[ -n "$new" || -z "$current" ]]; then
+    wizard_config_set "gitext" "$new"
   fi
   echo
 

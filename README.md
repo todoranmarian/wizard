@@ -110,6 +110,7 @@ Targets:
 * idea — IntelliJ IDEA
 * rider — JetBrains Rider
 * vs — Visual Studio / VS Code
+* git-extensions — GitExtensions
 
 ## 🔮 Autocomplete
 Wizard includes a dynamic Bash completion script that supports:

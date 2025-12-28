@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+# Load shared library
+WIZARD_HOME="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$WIZARD_HOME/lib/wizard-common"
+
+CMD="summon:git-extensions"
+
+# Default to current directory if no argument is provided
+target="${1:-.}"
+fullpath="$(wizard_realpath "$target")"
+
+# Check if directory exists
+[[ ! -d "$fullpath" ]] && wizard_fail "'$target' is not a directory."
+
+# Check if it's a git repo
+if [[ ! -d "$fullpath/.git" ]]; then
+  wizard_fail "This is not a git repository: $fullpath"
+fi
+
+# Load GitExtensions path from config
+gitext="$(wizard_config_get gitext)"
+[[ -z "$gitext" ]] && wizard_fail "GitExtensions is not configured. Run: wizard configure"
+
+wizard_log_cmd "$CMD" "Opening GitExtensions for repo: $fullpath"
+
+"$gitext" "$fullpath" >/dev/null 2>&1 &
+
+wizard_log_cmd "$CMD" "Summon complete."
