@@ -33,7 +33,7 @@ Wizard is designed to be:
 
 Run this incantation from GitHub:
 ```bash
-curl -s https://raw.githubusercontent.com/<your-username>/wizard/main/install.sh | bash
+curl -s https://raw.githubusercontent.com/todoranmarian/wizard/master/install.sh | bash
 ```
 Then restart your terminal or run:
 ```bash
